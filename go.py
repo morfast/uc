@@ -4,6 +4,24 @@ import sys
 import socket
 import struct
 
+Max_Label = 0
+
+class FamilyLabel:
+    Max_Label = 0
+    def __init__(self):
+        FamilyLabel.Max_Label += 1
+        self._value_ = FamilyLabel.Max_Label
+    def value(self):
+        return self._value_
+
+class MatrixElement:
+    def __init__(self, id, ip, time):
+        self.id = id
+        self.ip = ip
+        self.time = time
+        self.label = None
+        self.delete = False
+
 def convert_time(timestr):
     # 2016-10-11 09:11:13 -> 9*60+11
     x = timestr.split(':')
@@ -11,51 +29,6 @@ def convert_time(timestr):
     m = x[1]
     return int(h) * 60 + int(m)
 
-def qq_per_ip():
-    i = 0
-    ip_qq = {}
-    for line in open(sys.argv[1]):
-        spline = line.strip().split()
-        time = convert_time(spline[2])
-        qq = spline[3]
-        ipport = spline[4]
-        ip, port = ipport.split(":")
-    
-        if ip in ip_qq.keys():
-            ip_qq[ip].append([qq, time])
-        else:
-            ip_qq[ip] = [[qq, time]]
-        i += 1
-        if i % 1000 == 0:
-            sys.stderr.write("%d\n" % i)
-    
-    for ip in ip_qq.keys():
-        print ip, ip_qq[ip]
-    
-def ip_per_qq():
-    i = 0
-    ip_per_qq = {}
-    for line in open(sys.argv[1]):
-        spline = line.strip().split()
-        time = convert_time(spline[2])
-        qq = spline[3]
-        ipport = spline[4]
-        ip, port = ipport.split(":")
-    
-        if qq in ip_per_qq.keys():
-            ip_per_qq[qq].add(ip)
-        else:
-            ip_per_qq[qq] = set()
-            ip_per_qq[qq].add(ip)
-        i += 1
-        if i % 1000 == 0:
-            sys.stderr.write("%d\n" % i)
-    
-    for qq in ip_per_qq.keys():
-        print qq, ip_per_qq[qq]
-
-def ip_to_number(ip):
-    [int(i) for i in ip.split(".")]
 
 def ip2int( ip ):
     return struct.unpack('!L',socket.inet_aton(ip))[0]
@@ -63,36 +36,82 @@ def ip2int( ip ):
 def int2ip( ip ):
     return socket.inet_ntoa(struct.pack('I',socket.htonl(ip)))
 
-def get_ip_qq_range(filename):
-    i = 0
-    min_ip, max_ip = 10e20, 0
-    min_qq, max_qq = 10e20, 0
-
-    for line in open(filename):
+def construct_matrix(filename):
+    res = []
+    for line in open(sys.argv[1]):
         spline = line.strip().split()
         time = convert_time(spline[2])
         qq = spline[3]
         ipport = spline[4]
         ip, port = ipport.split(":")
 
-        if int(qq) < min_qq:
-            min_qq = int(qq)
-        if int(qq) > max_qq:
-            max_qq = int(qq)
+        res.append(MatrixElement(int(qq), ip2int(ip), time))
 
-        if ip2int(ip) < min_ip:
-            min_ip = ip2int(ip)
-        if ip2int(ip) > max_ip:
-            max_ip = ip2int(ip)
-    
-        # print process
+    return res
+
+def print_matrix(matrix):
+    for elem in matrix:
+        if elem.label:
+            print elem.id, elem.ip, elem.time, elem.label.value(), elem.delete
+
+def mark_according_to_id(matrix):
+    global Max_Label
+    # sort with id
+    matrix.sort(key = lambda x:(x.id, x.ip, x.time))
+    i = 0
+    length = len(matrix)
+    while i < length - 1: 
+        # same id
+        if matrix[i].id == matrix[i+1].id:
+            label = FamilyLabel()
+            matrix[i].label = label
+            ipstate = 0 # 0: starting mark 1: in marking
+            while matrix[i].id == matrix[i+1].id:
+
+                # access from the same ip: leave the head and tail only
+                if ipstate == 0:
+                    if matrix[i].ip == matrix[i+1].ip:
+                        matrix[i+1].delete = True
+                        ipstate = 1
+                    else:
+                        pass
+                elif ipstate == 1:
+                    if matrix[i].ip == matrix[i+1].ip:
+                        matrix[i+1].delete = True
+                    else:
+                        ipstate = 0
+                        matrix[i].delete = False
+
+                matrix[i+1].label = label
+                i += 1
+            matrix[i].delete = False
         i += 1
-        if i % 1000 == 0:
-            sys.stderr.write("%d\n" % i)
 
-    return min_ip, max_ip, min_qq, max_qq
+
+def mark_according_to_ip(matrix):
+    global Max_Label
     
+    matrix.sort(key = lambda x:(x.ip, x.time))
+    for i,elem in enumerate(matrix[:-1]):
+        if matrix[i+1].id == matrix[i].id:
+            matrix[i].label = Max_Label
+            matrix[i+1].label = Max_Label
+        else:
+            Max_Label += 1
+    print_matrix(matrix)
 
-print get_ip_qq_range(sys.argv[1])
+
+
+#a = FamilyLabel()
+#b = FamilyLabel()
+#print a.get_value()
+#print b.get_value()
+#sys.exit(0)
+
+
+m = construct_matrix(sys.argv[1])
+mark_according_to_id(m)
+print_matrix(m)
+#mark_according_to_ip(m)
 
 
