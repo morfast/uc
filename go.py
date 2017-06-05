@@ -13,6 +13,8 @@ class FamilyLabel:
         self._value_ = FamilyLabel.Max_Label
     def value(self):
         return self._value_
+    def set_value(self, v):
+        self._value_ = v
 
 class MatrixElement:
     def __init__(self, id, ip, time):
@@ -53,9 +55,10 @@ def print_matrix(matrix):
     for elem in matrix:
         if elem.label:
             print elem.id, elem.ip, elem.time, elem.label.value(), elem.delete
+        else:
+            print elem.id, elem.ip, elem.time, elem.label, elem.delete
 
 def mark_according_to_id(matrix):
-    global Max_Label
     # sort with id
     matrix.sort(key = lambda x:(x.id, x.ip, x.time))
     i = 0
@@ -66,8 +69,7 @@ def mark_according_to_id(matrix):
             label = FamilyLabel()
             matrix[i].label = label
             ipstate = 0 # 0: starting mark 1: in marking
-            while matrix[i].id == matrix[i+1].id:
-
+            while (i < length - 1) and (matrix[i].id == matrix[i+1].id):
                 # access from the same ip: leave the head and tail only
                 if ipstate == 0:
                     if matrix[i].ip == matrix[i+1].ip:
@@ -87,17 +89,55 @@ def mark_according_to_id(matrix):
             matrix[i].delete = False
         i += 1
 
+def delete_redundant(matrix):
+    return [e for e in matrix if e.delete == False]
+
+def mark_same(matrix, start, length):
+    # how many labels?
+    labels = set([elem.label.value() for elem in matrix[start:start+length] if elem.label != None])
+
+    for l in labels:
+        # replace labels between two l
+        i = start 
+        # search the first l
+        while i < start + length:
+            if matrix[i].label == None or matrix[i].label.value() != l:
+                i += 1
+            else:
+                break
+        # begin mark
+        i += 1
+        while i < start + length:
+            if matrix[i].label:
+                if matrix[i].label.value() != l:
+                    matrix[i].label.set_value(l)
+            elif matrix[i].label == None:
+                matrix[i].label = FamilyLabel()
+                matrix[i].label.set_value(l)
+            else:
+                break
+            i += 1
+
 
 def mark_according_to_ip(matrix):
     global Max_Label
     
     matrix.sort(key = lambda x:(x.ip, x.time))
-    for i,elem in enumerate(matrix[:-1]):
-        if matrix[i+1].id == matrix[i].id:
-            matrix[i].label = Max_Label
-            matrix[i+1].label = Max_Label
+    #print_matrix(matrix)
+    i = 0
+    length = len(matrix)
+    same_len = 1
+    same_start = 0
+    while i < length - 1: 
+        if matrix[i].ip == matrix[i+1].ip:
+            same_len += 1
         else:
-            Max_Label += 1
+            if same_len >= 3:
+                # mark elements between two same id
+                mark_same(matrix, same_start, same_len)
+            same_len = 1
+            same_start = i + 1
+        i += 1
     print_matrix(matrix)
 
 
@@ -109,9 +149,13 @@ def mark_according_to_ip(matrix):
 #sys.exit(0)
 
 
+sys.stderr.write("construct matrix\n")
 m = construct_matrix(sys.argv[1])
+sys.stderr.write("id\n")
 mark_according_to_id(m)
-print_matrix(m)
-#mark_according_to_ip(m)
+m = [e for e in m if e.delete == False]
+#print_matrix(m)
+sys.stderr.write("ip\n")
+mark_according_to_ip(m)
 
 
