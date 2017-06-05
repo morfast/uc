@@ -54,9 +54,9 @@ def construct_matrix(filename):
 def print_matrix(matrix):
     for elem in matrix:
         if elem.label:
-            print elem.id, elem.ip, elem.time, elem.label.value(), elem.delete
+            print elem.id, int2ip(elem.ip), elem.time, elem.label.value(), elem.delete
         else:
-            print elem.id, elem.ip, elem.time, elem.label, elem.delete
+            print elem.id, int2ip(elem.ip), elem.time, elem.label, elem.delete
 
 def mark_according_to_id(matrix):
     # sort with id
@@ -94,9 +94,12 @@ def delete_redundant(matrix):
 
 def mark_same(matrix, start, length):
     # how many labels?
-    labels = set([elem.label.value() for elem in matrix[start:start+length] if elem.label != None])
+    labels = [elem.label.value() for elem in matrix[start:start+length] if elem.label != None]
+    labels_set = set(labels)
 
-    for l in labels:
+    for l in labels_set:
+        if labels.count(l) <= 1:
+            continue
         # replace labels between two l
         i = start 
         # search the first l
@@ -123,7 +126,7 @@ def mark_according_to_ip(matrix):
     global Max_Label
     
     matrix.sort(key = lambda x:(x.ip, x.time))
-    #print_matrix(matrix)
+    print_matrix(matrix)
     i = 0
     length = len(matrix)
     same_len = 1
@@ -138,7 +141,7 @@ def mark_according_to_ip(matrix):
             same_len = 1
             same_start = i + 1
         i += 1
-    print_matrix(matrix)
+    #print_matrix(matrix)
 
 
 
