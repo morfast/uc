@@ -121,12 +121,47 @@ def mark_same(matrix, start, length):
                 break
             i += 1
 
+def guess_family(matrix, start, length):
+    """ guess family label according to time info """
+    time_threshold = 60
+
+    if length == 1 and matrix[start].label == None:
+        newlabel = FamilyLabel()
+        matrix[start].label = newlabel
+        return
+
+    i = start
+    while i < start + length:
+        if matrix[i].label == None:
+            # look backward
+            if i-1 >= start:
+                if matrix[i].time - matrix[i-1].time < time_threshold:
+                    matrix[i].label = matrix[i-1].label
+            # look foreward
+            if matrix[i].label == None and i+1 < start + length:
+                if matrix[i+1].time - matrix[i].time < time_threshold:
+                    if matrix[i+1].label != None:
+                        matrix[i].label = matrix[i+1].label
+                    else:
+                        newlabel = FamilyLabel()
+                        matrix[i].label = newlabel
+                        #matrix[i+1].label = newlabel
+                else:
+                    newlabel = FamilyLabel()
+                    matrix[i].label = newlabel
+        i += 1
+
+    i -= 1
+    if matrix[i].label == None:
+        newlabel = FamilyLabel()
+        matrix[i].label = newlabel
+
 
 def mark_according_to_ip(matrix):
     global Max_Label
     
     matrix.sort(key = lambda x:(x.ip, x.time))
-    print_matrix(matrix)
+    #print_matrix(matrix)
     i = 0
     length = len(matrix)
     same_len = 1
@@ -138,12 +173,35 @@ def mark_according_to_ip(matrix):
             if same_len >= 3:
                 # mark elements between two same id
                 mark_same(matrix, same_start, same_len)
+            guess_family(matrix, same_start, same_len)
             same_len = 1
             same_start = i + 1
         i += 1
-    #print_matrix(matrix)
+
+    if matrix[i].ip != matrix[i-1].ip:
+        guess_family(matrix, i, 1)
+
+    print_matrix(matrix)
 
 
+def test():
+    label = FamilyLabel()
+    a = MatrixElement(0,0,0)
+    b = MatrixElement(0,0,0)
+    c = MatrixElement(0,0,0)
+    a.label = label
+    b.label = label
+    c.label = label
+
+    print a.label.value()
+    print b.label.value()
+    print c.label.value()
+
+    a.label.set_value(3)
+
+    print a.label.value()
+    print b.label.value()
+    print c.label.value()
 
 #a = FamilyLabel()
 #b = FamilyLabel()
