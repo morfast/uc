@@ -183,6 +183,9 @@ def mark_according_to_ip(matrix):
 
     print_matrix(matrix)
 
+def count_label(matrix):
+    return len(set([e.label.value() for e in matrix]))
+
 
 def test():
     label = FamilyLabel()
@@ -218,5 +221,6 @@ m = [e for e in m if e.delete == False]
 #print_matrix(m)
 sys.stderr.write("ip\n")
 mark_according_to_ip(m)
+sys.stderr.write("result: %d\n" % count_label(m))
 
 
