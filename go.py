@@ -94,7 +94,7 @@ def delete_redundant(matrix):
 
 def mark_same(matrix, start, length):
     # how many labels?
-    labels = [elem.label.value() for elem in matrix[start:start+length] if elem.label != None]
+    labels = [elem.label for elem in matrix[start:start+length] if elem.label != None]
     labels_set = set(labels)
 
     for l in labels_set:
@@ -104,22 +104,16 @@ def mark_same(matrix, start, length):
         i = start 
         # search the first l
         while i < start + length:
-            if matrix[i].label == None or matrix[i].label.value() != l:
-                i += 1
-            else:
-                break
-        # begin mark
-        i += 1
-        while i < start + length:
-            if matrix[i].label:
-                if matrix[i].label.value() != l:
-                    matrix[i].label.set_value(l)
-            elif matrix[i].label == None:
-                matrix[i].label = FamilyLabel()
-                matrix[i].label.set_value(l)
-            else:
+            if matrix[i].label == l:
                 break
             i += 1
+        # begin mark
+        while i < start + length:
+            i += 1
+            if matrix[i].label != l:
+                    matrix[i].label = l
+            else:
+                break
 
 def guess_family(matrix, start, length):
     """ guess family label according to time info """
@@ -172,19 +166,30 @@ def mark_according_to_ip(matrix):
         else:
             if same_len >= 3:
                 # mark elements between two same id
+                print same_len
                 mark_same(matrix, same_start, same_len)
             guess_family(matrix, same_start, same_len)
             same_len = 1
             same_start = i + 1
         i += 1
 
+    if same_len >= 3:
+        mark_same(matrix, same_start, same_len)
+
+    #print_matrix(matrix)
+    #sys.exit(0)
     if matrix[i].ip != matrix[i-1].ip:
         guess_family(matrix, i, 1)
 
-    print_matrix(matrix)
 
 def count_label(matrix):
     return len(set([e.label.value() for e in matrix]))
+
+def count_ip(matrix):
+    return len(set([e.ip for e in matrix]))
+
+def count_id(matrix):
+    return len(set([e.id for e in matrix]))
 
 
 def test():
@@ -208,8 +213,14 @@ def test():
 
 #a = FamilyLabel()
 #b = FamilyLabel()
-#print a.get_value()
-#print b.get_value()
+#c = a
+#print len(set([a,b,c]))
+##print a==b
+##print a==c
+##aa = [a,b,c]
+##print aa.count(a)
+###print a.get_value()
+###print b.get_value()
 #sys.exit(0)
 
 
@@ -221,6 +232,6 @@ m = [e for e in m if e.delete == False]
 #print_matrix(m)
 sys.stderr.write("ip\n")
 mark_according_to_ip(m)
-sys.stderr.write("result: %d\n" % count_label(m))
-
-
+sys.stderr.write("number of ip: %d\n" % count_ip(m))
+sys.stderr.write("number of id: %d\n" % count_id(m))
+sys.stderr.write("number of family: %d\n" % count_label(m))
