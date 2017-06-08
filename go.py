@@ -44,10 +44,14 @@ def construct_matrix(filename):
         spline = line.strip().split()
         time = convert_time(spline[2])
         qq = spline[3]
+        try:
+            qq = int(qq)
+        except ValueError,e:
+            continue
         ipport = spline[4]
         ip, port = ipport.split(":")
 
-        res.append(MatrixElement(int(qq), ip2int(ip), time))
+        res.append(MatrixElement(qq, ip2int(ip), time))
 
     return res
 
@@ -108,21 +112,29 @@ def mark_same(matrix, start, length):
                 break
             i += 1
         # begin mark
+        i += 1
         while i < start + length:
-            i += 1
             if matrix[i].label != l:
                     matrix[i].label = l
             else:
                 break
+            i += 1
 
 def guess_family(matrix, start, length):
     """ guess family label according to time info """
     time_threshold = 60
 
+    labels = [elem.label for elem in matrix[start:start+length] if elem.label != None]
+    n_marked = len(set(labels))
+    labels = [elem.label for elem in matrix[start:start+length] if elem.label == None]
+    n_none = len(set(labels))
+
     if length == 1 and matrix[start].label == None:
         newlabel = FamilyLabel()
         matrix[start].label = newlabel
-        return
+        return 1, 0
+    elif length == 1 and matrix[start].label:
+        return 0, 1
 
     i = start
     while i < start + length:
@@ -150,6 +162,7 @@ def guess_family(matrix, start, length):
         newlabel = FamilyLabel()
         matrix[i].label = newlabel
 
+    return n_none, n_marked
 
 def mark_according_to_ip(matrix):
     global Max_Label
@@ -160,27 +173,34 @@ def mark_according_to_ip(matrix):
     length = len(matrix)
     same_len = 1
     same_start = 0
+    n_none = 0
+    n_marked = 0
     while i < length - 1: 
         if matrix[i].ip == matrix[i+1].ip:
             same_len += 1
         else:
             if same_len >= 3:
                 # mark elements between two same id
-                print same_len
                 mark_same(matrix, same_start, same_len)
-            guess_family(matrix, same_start, same_len)
+            n,m = guess_family(matrix, same_start, same_len)
+            n_none += n
+            n_marked += m
             same_len = 1
             same_start = i + 1
         i += 1
 
     if same_len >= 3:
         mark_same(matrix, same_start, same_len)
+        n,m = guess_family(matrix, same_start, same_len)
+        n_none += n
+        n_marked += m
 
-    #print_matrix(matrix)
-    #sys.exit(0)
     if matrix[i].ip != matrix[i-1].ip:
-        guess_family(matrix, i, 1)
+        n,m = guess_family(matrix, i, 1)
+        n_none += n
+        n_marked += m
 
+    return n_none, n_marked
 
 def count_label(matrix):
     return len(set([e.label.value() for e in matrix]))
@@ -190,6 +210,9 @@ def count_ip(matrix):
 
 def count_id(matrix):
     return len(set([e.id for e in matrix]))
+
+def count_none(matrix):
+    return len(set([e for e in matrix if e.label == None]))
 
 
 def test():
@@ -226,12 +249,15 @@ def test():
 
 sys.stderr.write("construct matrix\n")
 m = construct_matrix(sys.argv[1])
-sys.stderr.write("id\n")
+sys.stderr.write("mark by id\n")
 mark_according_to_id(m)
 m = [e for e in m if e.delete == False]
+sys.stderr.write("mark by ip\n\n")
+n_none, n_marked = mark_according_to_ip(m)
+#sys.stderr.write("number of none: %d\n" % n_none)
+#sys.stderr.write("number of marked: %d\n" % n_marked)
+sys.stderr.write("range: (%d, %d)\n" % (n_marked, n_marked + n_none))
 #print_matrix(m)
-sys.stderr.write("ip\n")
-mark_according_to_ip(m)
-sys.stderr.write("number of ip: %d\n" % count_ip(m))
-sys.stderr.write("number of id: %d\n" % count_id(m))
-sys.stderr.write("number of family: %d\n" % count_label(m))
+sys.stderr.write("Number of IP: %d\n" % count_ip(m))
+sys.stderr.write("Number of ID: %d\n" % count_id(m))
+sys.stderr.write("Number of family: %d\n" % count_label(m))
