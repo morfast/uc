@@ -108,14 +108,14 @@ def mark_same(matrix, start, length):
         i = start 
         # search the first l
         while i < start + length:
-            if matrix[i].label == l:
+            if matrix[i].label and matrix[i].label.value() == l.value():
                 break
             i += 1
         # begin mark
         i += 1
         while i < start + length:
-            if matrix[i].label != l:
-                    matrix[i].label = l
+            if matrix[i].label and matrix[i].label.value() != l.value():
+                    matrix[i].label.set_value(l.value())
             else:
                 break
             i += 1
