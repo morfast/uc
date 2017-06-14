@@ -40,7 +40,7 @@ def int2ip( ip ):
 
 def construct_matrix(filename):
     res = []
-    for line in open(sys.argv[1]):
+    for line in open(filename):
         spline = line.strip().split()
         time = convert_time(spline[2])
         qq = spline[3]
@@ -106,19 +106,34 @@ def mark_same(matrix, start, length):
             continue
         # replace labels between two l
         i = start 
-        # search the first l
+        # search the first l from the beginning
         while i < start + length:
             if matrix[i].label and matrix[i].label.value() == l.value():
                 break
             i += 1
+        # search the last l from the end
+        j = start + length - 1
+        while j > i:
+            if matrix[j].label and matrix[j].label.value() == l.value():
+                break
+            j -= 1
+
         # begin mark
         i += 1
-        while i < start + length:
+        while i < j:
             if matrix[i].label and matrix[i].label.value() != l.value():
                     matrix[i].label.set_value(l.value())
-            else:
-                break
+            elif matrix[i].label == None:
+                    matrix[i].label = l
             i += 1
+
+def mark_none_as_single_family(matrix, start, length):
+    i = start
+    while i < start + length:
+        if matrix[i].label == None:
+            label = FamilyLabel()
+            matrix[i].label = label
+        i += 1
 
 def guess_family(matrix, start, length):
     """ guess family label according to time info """
@@ -182,23 +197,23 @@ def mark_according_to_ip(matrix):
             if same_len >= 3:
                 # mark elements between two same id
                 mark_same(matrix, same_start, same_len)
-            n,m = guess_family(matrix, same_start, same_len)
-            n_none += n
-            n_marked += m
+            #n,m = guess_family(matrix, same_start, same_len)
+            #n_none += n
+            #n_marked += m
             same_len = 1
             same_start = i + 1
         i += 1
 
     if same_len >= 3:
         mark_same(matrix, same_start, same_len)
-        n,m = guess_family(matrix, same_start, same_len)
-        n_none += n
-        n_marked += m
+        #n,m = guess_family(matrix, same_start, same_len)
+        #n_none += n
+        #n_marked += m
 
-    if matrix[i].ip != matrix[i-1].ip:
-        n,m = guess_family(matrix, i, 1)
-        n_none += n
-        n_marked += m
+    #if matrix[i].ip != matrix[i-1].ip:
+    #    n,m = guess_family(matrix, i, 1)
+    #    n_none += n
+    #    n_marked += m
 
     return n_none, n_marked
 
@@ -214,6 +229,43 @@ def count_id(matrix):
 def count_none(matrix):
     return len(set([e for e in matrix if e.label == None]))
 
+def group_by_family(matrix):
+    labels = [(x.label.value(), x.id) for x in matrix if x.label]
+    labels.sort(key=lambda x:x[0])
+
+    i = 0
+    length = len(labels)
+    g = [labels[0][1],]
+    res = []
+    while i < length - 1: 
+        if labels[i][0] == labels[i+1][0]:
+            g.append(labels[i+1][1])
+        else:
+            if len(set(g)) > 1:
+                res.append(set(g))
+            g = [labels[i+1][1]]
+        i += 1
+
+    return res
+    
+def merge_two_sets(a, b):
+    res = []
+    for i,ea in enumerate(a):
+        for j, eb in enumerate(b):
+            if isinstance(eb, set) and ea.intersection(eb):
+                # have common with each other, merge them
+                res.append(ea.union(eb))
+                a[i] = 0
+                b[j] = 0
+                break
+        if a[i] != 0: # similar set not found in b
+            res.append(a[i])
+
+    for eb in b:
+        if isinstance(eb, set):
+            res.append(eb)
+                
+    return res
 
 def test():
     label = FamilyLabel()
@@ -247,17 +299,30 @@ def test():
 #sys.exit(0)
 
 
-sys.stderr.write("construct matrix\n")
-m = construct_matrix(sys.argv[1])
-sys.stderr.write("mark by id\n")
-mark_according_to_id(m)
-m = [e for e in m if e.delete == False]
-sys.stderr.write("mark by ip\n\n")
-n_none, n_marked = mark_according_to_ip(m)
-#sys.stderr.write("number of none: %d\n" % n_none)
-#sys.stderr.write("number of marked: %d\n" % n_marked)
-sys.stderr.write("range: (%d, %d)\n" % (n_marked, n_marked + n_none))
-#print_matrix(m)
+result_set = []
+for filename in sys.argv[1:]:
+    sys.stderr.write("%s\n" % (filename))
+    sys.stderr.write("construct matrix\n")
+    m = construct_matrix(filename)
+    sys.stderr.write("mark by id\n")
+    mark_according_to_id(m)
+    m = [e for e in m if e.delete == False]
+    sys.stderr.write("mark by ip\n")
+    n_none, n_marked = mark_according_to_ip(m)
+    #sys.stderr.write("number of none: %d\n" % n_none)
+    #sys.stderr.write("number of marked: %d\n" % n_marked)
+    #sys.stderr.write("range: (%d, %d)\n" % (n_marked, n_marked + n_none))
+    #print_matrix(m)
+    r = group_by_family(m)
+    print r
+    print "number of sets: %d" % (len(r))
+    result_set = merge_two_sets( result_set, r)
+    print "number of total sets after merging: %d" % (len(result_set))
+    print
+
+#print result_set
+sys.exit(0)
+
 sys.stderr.write("Number of IP: %d\n" % count_ip(m))
 sys.stderr.write("Number of ID: %d\n" % count_id(m))
 sys.stderr.write("Number of family: %d\n" % count_label(m))
