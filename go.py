@@ -42,14 +42,14 @@ def construct_matrix(filename):
     res = []
     for line in open(filename):
         spline = line.strip().split()
-        time = convert_time(spline[2])
-        qq = spline[3]
+        time = convert_time(spline[0])
+        qq = spline[2]
         try:
             qq = int(qq)
         except ValueError,e:
             continue
-        ipport = spline[4]
-        ip, port = ipport.split(":")
+        #ipport = spline[4]
+        ip = spline[1]
 
         res.append(MatrixElement(qq, ip2int(ip), time))
 
@@ -267,6 +267,32 @@ def merge_two_sets(a, b):
                 
     return res
 
+def exist_in_sets(id, sets):
+    for i,s in enumerate(sets):
+        if id in s:
+            return i
+    return -1
+
+def count_unlabeled_with_dict(matrix, sets):
+    ret = 0
+    for elem in matrix:
+        if elem.label == None and (not exist_in_sets(elem.id, sets)):
+            ret += 1
+    return ret
+
+def count_user_number_with_dict(matrix, result_dict):
+    ret = 0
+    all_labels = []
+    n_orphan = 0
+    for elem in matrix:
+        try: 
+            exist = result_dict[elem.id]
+            all_labels.append(exist)
+        except KeyError:
+            n_orphan += 1
+
+    return len(set(all_labels)), n_orphan
+    
 def test():
     label = FamilyLabel()
     a = MatrixElement(0,0,0)
@@ -300,6 +326,8 @@ def test():
 
 
 result_set = []
+result_dict = {}
+all_matrix = []
 for filename in sys.argv[1:]:
     sys.stderr.write("%s\n" % (filename))
     sys.stderr.write("construct matrix\n")
@@ -314,11 +342,23 @@ for filename in sys.argv[1:]:
     #sys.stderr.write("range: (%d, %d)\n" % (n_marked, n_marked + n_none))
     #print_matrix(m)
     r = group_by_family(m)
-    print r
+    all_matrix.append((filename, m, len(r)))
     print "number of sets: %d" % (len(r))
     result_set = merge_two_sets( result_set, r)
     print "number of total sets after merging: %d" % (len(result_set))
     print
+
+# convert sets to dict
+print "convert sets to dict...",
+for i,s in enumerate(result_set):
+    for elem in s:
+        result_dict[elem] = i
+print "Done"
+
+for filename, m, n_sets in all_matrix:
+    n_family, n_orphan = count_user_number_with_dict(m, result_dict)
+    print "RESULT for %s: %d %d %d" % (filename, n_family, n_orphan, n_family+n_orphan)
+
 
 #print result_set
 sys.exit(0)
