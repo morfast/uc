@@ -25,11 +25,10 @@ class MatrixElement:
         self.delete = False
 
 def convert_time(timestr):
-    # 2016-10-11 09:11:13 -> 9*60+11
-    x = timestr.split(':')
-    h = x[0]
-    m = x[1]
-    return int(h) * 60 + int(m)
+    """ convert time string to number of seconds """
+    # 09:11:13 -> 9*60*60 + 11*60 + 13
+    h, m, s = timestr.split(':')
+    return int(h) * 3600 + int(m) * 60 + int(s)
 
 
 def ip2int( ip ):
@@ -43,15 +42,16 @@ def construct_matrix(filename):
     for line in open(filename):
         spline = line.strip().split()
         time = convert_time(spline[0])
-        qq = spline[2]
+        userid = spline[2]
         try:
-            qq = int(qq)
+            int(userid)
         except ValueError,e:
-            continue
+            if '=' not in userid:
+                continue
         #ipport = spline[4]
         ip = spline[1]
 
-        res.append(MatrixElement(qq, ip2int(ip), time))
+        res.append(MatrixElement(userid, ip2int(ip), time))
 
     return res
 
@@ -183,7 +183,6 @@ def mark_according_to_ip(matrix):
     global Max_Label
     
     matrix.sort(key = lambda x:(x.ip, x.time))
-    #print_matrix(matrix)
     i = 0
     length = len(matrix)
     same_len = 1
@@ -197,23 +196,12 @@ def mark_according_to_ip(matrix):
             if same_len >= 3:
                 # mark elements between two same id
                 mark_same(matrix, same_start, same_len)
-            #n,m = guess_family(matrix, same_start, same_len)
-            #n_none += n
-            #n_marked += m
             same_len = 1
             same_start = i + 1
         i += 1
 
     if same_len >= 3:
         mark_same(matrix, same_start, same_len)
-        #n,m = guess_family(matrix, same_start, same_len)
-        #n_none += n
-        #n_marked += m
-
-    #if matrix[i].ip != matrix[i-1].ip:
-    #    n,m = guess_family(matrix, i, 1)
-    #    n_none += n
-    #    n_marked += m
 
     return n_none, n_marked
 
@@ -292,26 +280,15 @@ def count_user_number_with_dict(matrix, result_dict):
             n_orphan += 1
 
     return len(set(all_labels)), n_orphan
-    
-def test():
-    label = FamilyLabel()
-    a = MatrixElement(0,0,0)
-    b = MatrixElement(0,0,0)
-    c = MatrixElement(0,0,0)
-    a.label = label
-    b.label = label
-    c.label = label
 
-    print a.label.value()
-    print b.label.value()
-    print c.label.value()
-
-    a.label.set_value(3)
-
-    print a.label.value()
-    print b.label.value()
-    print c.label.value()
-
+def write_sets(sets, filename):           
+    f = open(filename, "w")               
+                                          
+    for s in sets:                        
+        for elem in s:                    
+            f.write("%s " % (elem))       
+        f.write("\n")                     
+                                          
 #a = FamilyLabel()
 #b = FamilyLabel()
 #c = a
