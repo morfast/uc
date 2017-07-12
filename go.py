@@ -232,11 +232,15 @@ def group_by_ip(matrix):
 def find_family_in_possbile_groups(all_possible_family):
     res = []
     for fs1, fs2 in zip(all_possible_family[::2], all_possible_family[1::2]):
-        for f1 in fs1:
+        print "search in possible groups: %d %d" % (len(fs1), len(fs2))
+        for i,f1 in enumerate(fs1):
+            if i % 10000 == 0:
+                print "%3.1f%% complete" % (float(i)/len(fs1) * 100)
             for f2 in fs2:
                 commonid = f1.intersection(f2)
                 if len(commonid) > 1:
                     res.append(commonid)
+                    break
     return res
 
 
@@ -256,6 +260,10 @@ def group_by_label(matrix):
     labels = [(x.label.value(), x.id) for x in matrix if x.label]
     labels.sort(key=lambda x:x[0])
 
+    if not labels:
+        return []
+
+
     i = 0
     length = len(labels)
     g = [labels[0][1],]
@@ -268,6 +276,9 @@ def group_by_label(matrix):
                 res.append(set(g))
             g = [labels[i+1][1]]
         i += 1
+
+    if len(set(g)) > 1:
+        res.append(set(g))
 
     return res
     
@@ -345,6 +356,7 @@ def main():
         # mark labels by IP
         sys.stderr.write("marking by ip\n")
         mark_according_to_ip(m)
+        #print_matrix(m)
 
         # group IDs which use the same IP, these IDs are possible in the same family
         possible_family = group_by_ip(m)
