@@ -187,8 +187,6 @@ def mark_according_to_ip(matrix):
     length = len(matrix)
     same_len = 1
     same_start = 0
-    n_none = 0
-    n_marked = 0
     while i < length - 1: 
         if matrix[i].ip == matrix[i+1].ip:
             same_len += 1
@@ -202,8 +200,6 @@ def mark_according_to_ip(matrix):
 
     if same_len >= 3:
         mark_same(matrix, same_start, same_len)
-
-    return n_none, n_marked
 
 def count_label(matrix):
     return len(set([e.label.value() for e in matrix]))
@@ -289,19 +285,6 @@ def write_sets(sets, filename):
             f.write("%s " % (elem))       
         f.write("\n")                     
                                           
-#a = FamilyLabel()
-#b = FamilyLabel()
-#c = a
-#print len(set([a,b,c]))
-##print a==b
-##print a==c
-##aa = [a,b,c]
-##print aa.count(a)
-###print a.get_value()
-###print b.get_value()
-#sys.exit(0)
-
-
 result_set = []
 result_dict = {}
 all_matrix = []
@@ -313,10 +296,7 @@ for filename in sys.argv[1:]:
     mark_according_to_id(m)
     m = [e for e in m if e.delete == False]
     sys.stderr.write("mark by ip\n")
-    n_none, n_marked = mark_according_to_ip(m)
-    #sys.stderr.write("number of none: %d\n" % n_none)
-    #sys.stderr.write("number of marked: %d\n" % n_marked)
-    #sys.stderr.write("range: (%d, %d)\n" % (n_marked, n_marked + n_none))
+    mark_according_to_ip(m)
     #print_matrix(m)
     r = group_by_family(m)
     all_matrix.append((filename, m, len(r)))
