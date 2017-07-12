@@ -201,6 +201,45 @@ def mark_according_to_ip(matrix):
     if same_len >= 3:
         mark_same(matrix, same_start, same_len)
 
+def group_by_ip(matrix):
+    """ group ID by ip (they are possible in the same family) """
+    res = []
+    # assuming already sorted by IP
+    i = 0
+    length = len(matrix)
+    same_len = 1
+    same_start = 0
+    while i < length - 1: 
+        if matrix[i].ip == matrix[i+1].ip:
+            same_len += 1
+        else:
+            if same_len >= 2:
+                # mark elements between two same id
+                rset = set([elem.id for elem in matrix[same_start:same_start+same_len]])
+                if len(rset) >= 2:
+                    res.append(rset)
+            same_len = 1
+            same_start = i + 1
+        i += 1
+
+    if same_len >= 2:
+        rset = set([elem.id for elem in matrix[same_start:same_start+same_len]])
+        if len(rset) >= 2:
+            res.append(rset)
+
+    return res
+
+def find_family_in_possbile_groups(all_possible_family):
+    res = []
+    for fs1, fs2 in zip(all_possible_family[::2], all_possible_family[1::2]):
+        for f1 in fs1:
+            for f2 in fs2:
+                commonid = f1.intersection(f2)
+                if len(commonid) > 1:
+                    res.append(commonid)
+    return res
+
+
 def count_label(matrix):
     return len(set([e.label.value() for e in matrix]))
 
@@ -213,7 +252,7 @@ def count_id(matrix):
 def count_none(matrix):
     return len(set([e for e in matrix if e.label == None]))
 
-def group_by_family(matrix):
+def group_by_label(matrix):
     labels = [(x.label.value(), x.id) for x in matrix if x.label]
     labels.sort(key=lambda x:x[0])
 
@@ -285,41 +324,60 @@ def write_sets(sets, filename):
             f.write("%s " % (elem))       
         f.write("\n")                     
                                           
-result_set = []
-result_dict = {}
-all_matrix = []
-for filename in sys.argv[1:]:
-    sys.stderr.write("%s\n" % (filename))
-    sys.stderr.write("construct matrix\n")
-    m = construct_matrix(filename)
-    sys.stderr.write("mark by id\n")
-    mark_according_to_id(m)
-    m = [e for e in m if e.delete == False]
-    sys.stderr.write("mark by ip\n")
-    mark_according_to_ip(m)
-    #print_matrix(m)
-    r = group_by_family(m)
-    all_matrix.append((filename, m, len(r)))
-    print "number of sets: %d" % (len(r))
-    result_set = merge_two_sets( result_set, r)
-    print "number of total sets after merging: %d" % (len(result_set))
-    print
+def main():
+    if len(sys.argv) < 2:
+        sys.exit(0)
 
-# convert sets to dict
-print "convert sets to dict...",
-for i,s in enumerate(result_set):
-    for elem in s:
-        result_dict[elem] = i
-print "Done"
+    result_set = []
+    result_dict = {}
+    all_matrix = []
+    all_possible_family = []
+    for filename in sys.argv[1:]:
+        sys.stderr.write("processing file %s\n" % (filename))
+        sys.stderr.write("constructing accsess matrix\n")
+        m = construct_matrix(filename)
 
-for filename, m, n_sets in all_matrix:
-    n_family, n_orphan = count_user_number_with_dict(m, result_dict)
-    print "RESULT for %s: %d %d %d" % (filename, n_family, n_orphan, n_family+n_orphan)
+        # mark labels by ID
+        sys.stderr.write("marking by id\n")
+        mark_according_to_id(m)
+        m = [e for e in m if e.delete == False]
 
+        # mark labels by IP
+        sys.stderr.write("marking by ip\n")
+        mark_according_to_ip(m)
 
-#print result_set
-sys.exit(0)
+        # group IDs which use the same IP, these IDs are possible in the same family
+        possible_family = group_by_ip(m)
+        all_possible_family.append(possible_family)
 
-sys.stderr.write("Number of IP: %d\n" % count_ip(m))
-sys.stderr.write("Number of ID: %d\n" % count_id(m))
-sys.stderr.write("Number of family: %d\n" % count_label(m))
+        #print_matrix(m)
+        r = group_by_label(m)
+        all_matrix.append((filename, m, len(r)))
+        print "number of determined family for this file: %d" % (len(r))
+        result_set = merge_two_sets( result_set, r)
+        print "number of determined family in total: %d" % (len(result_set))
+        print
+
+    # determine in the possible set
+    r = find_family_in_possbile_groups(all_possible_family)
+    print "number of determined family in the possible set: %d" % (len(r))
+    result_set = merge_two_sets(result_set, r)
+    print "number of determined family in total: %d" % (len(result_set))
+    
+    # convert sets to dict
+    print "convert sets to dict...",
+    for i,s in enumerate(result_set):
+        for elem in s:
+            result_dict[elem] = i
+    print "Done"
+    
+    for filename, m, n_sets in all_matrix:
+        n_family, n_orphan = count_user_number_with_dict(m, result_dict)
+        print "RESULT for %s: %d %d %d" % (filename, n_family, n_orphan, n_family+n_orphan)
+    
+    
+    #print result_set
+    sys.exit(0)
+
+main()
+
