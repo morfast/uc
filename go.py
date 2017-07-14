@@ -335,8 +335,7 @@ def count_unlabeled_with_dict(matrix, sets):
             ret += 1
     return ret
 
-def count_user_number_with_dict(matrix, result_dict):
-    ret = 0
+def count_user_number_with_dict2(matrix, result_dict):
     all_labels = []
     n_orphan_with_none_label = 0
     orphan_label_set = set()
@@ -348,9 +347,32 @@ def count_user_number_with_dict(matrix, result_dict):
             if elem.label == None:
                 n_orphan_with_none_label += 1
             else:
-                orphan_label_set.add(elem.label.value)
+                orphan_label_set.add(elem.label.value())
 
     return len(set(all_labels)), n_orphan_with_none_label + len(orphan_label_set)
+
+def mark_with_dict(matrix, result_dict):
+    for elem in matrix:
+        try: 
+            newlabelvalue = result_dict[elem.id]
+            if elem.label == None:
+                elem.label = FamilyLabel()
+            elem.label.set_value(newlabelvalue)
+        except KeyError:
+            elem.label = None
+
+def count_user_number_with_dict(matrix, result_dict):
+    mark_with_dict(matrix, result_dict)
+    mark_according_to_ip(matrix)
+    determined_labels = []
+    orphan_ids = []
+    for elem in matrix:
+        if elem.label == None:
+            orphan_ids.append(elem.id)
+        else:
+            determined_labels.append(elem.label.value())
+    return len(set(determined_labels)), len(set(orphan_ids))
+
 
 def write_sets(sets, filename):           
     f = open(filename, "w")               
