@@ -45,6 +45,7 @@ def construct_matrix(filename):
         userid = spline[2]
         try:
             int(userid)
+            userid = 'QQ' + userid
         except ValueError,e:
             if '=' not in userid:
                 continue
