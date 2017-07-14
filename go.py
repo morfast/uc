@@ -281,6 +281,27 @@ def group_by_label(matrix):
         res.append(set(g))
 
     return res
+
+def merge_one_set(a):
+    """ [ [1,2,3], [1,2,3,4], ] => [ [1,2,3,4], ] """
+
+    merge_to_index = 0
+    determined = []
+    while merge_to_index < len(a) - 1:
+        compare_index = merge_to_index + 1
+        while compare_index < len(a):
+            intersection = a[merge_to_index].intersection(a[compare_index])
+            if intersection:
+                a[merge_to_index] = a[merge_to_index].union(a[compare_index])
+                a.pop(compare_index)
+                compare_index = merge_to_index + 1
+                if len(intersection) > 1:
+                    determined = merge_two_sets(determined, [intersection,])
+            else:
+                compare_index += 1
+        merge_to_index += 1
+                
+    return determined
     
 def merge_two_sets(a, b):
     res = []
@@ -317,15 +338,19 @@ def count_unlabeled_with_dict(matrix, sets):
 def count_user_number_with_dict(matrix, result_dict):
     ret = 0
     all_labels = []
-    n_orphan = 0
+    n_orphan_with_none_label = 0
+    orphan_label_set = set()
     for elem in matrix:
         try: 
             exist = result_dict[elem.id]
             all_labels.append(exist)
         except KeyError:
-            n_orphan += 1
+            if elem.label == None:
+                n_orphan_with_none_label += 1
+            else:
+                orphan_label_set.add(elem.label.value)
 
-    return len(set(all_labels)), n_orphan
+    return len(set(all_labels)), n_orphan_with_none_label + len(orphan_label_set)
 
 def write_sets(sets, filename):           
     f = open(filename, "w")               
@@ -360,17 +385,22 @@ def main():
 
         # group IDs which use the same IP, these IDs are possible in the same family
         possible_family = group_by_ip(m)
+        print "merging possible_family"
+        determined = merge_one_set(possible_family)
         all_possible_family.append(possible_family)
 
-        #print_matrix(m)
+        # print_matrix(m)
         r = group_by_label(m)
         all_matrix.append((filename, m, len(r)))
         print "number of determined family for this file: %d" % (len(r))
         result_set = merge_two_sets( result_set, r)
+        result_set = merge_two_sets( result_set, determined)
+        # print result_set
         print "number of determined family in total: %d" % (len(result_set))
         print
 
     # determine in the possible set
+    # print "all_possible_family", all_possible_family
     r = find_family_in_possbile_groups(all_possible_family)
     print "number of determined family in the possible set: %d" % (len(r))
     result_set = merge_two_sets(result_set, r)
@@ -392,4 +422,8 @@ def main():
     sys.exit(0)
 
 main()
+sys.exit(0)
+a = [set([1,2,3,4]), set([1,2,3]), set([5,6,7]), set([2,4,5])]
+print merge_one_set(a)
+print a
 
