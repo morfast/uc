@@ -232,10 +232,11 @@ def group_by_ip(matrix):
 
 def find_family_in_possbile_groups(all_possible_family):
     res = []
+    print "%d group pair to search" % (len(all_possible_family)/2)
     for fs1, fs2 in zip(all_possible_family[::2], all_possible_family[1::2]):
         print "search in possible groups: %d %d" % (len(fs1), len(fs2))
         for i,f1 in enumerate(fs1):
-            if i % 10000 == 0:
+            if i % 5000 == 0:
                 print "%3.1f%% complete" % (float(i)/len(fs1) * 100)
             for f2 in fs2:
                 commonid = f1.intersection(f2)
@@ -336,22 +337,6 @@ def count_unlabeled_with_dict(matrix, sets):
             ret += 1
     return ret
 
-def count_user_number_with_dict2(matrix, result_dict):
-    all_labels = []
-    n_orphan_with_none_label = 0
-    orphan_label_set = set()
-    for elem in matrix:
-        try: 
-            exist = result_dict[elem.id]
-            all_labels.append(exist)
-        except KeyError:
-            if elem.label == None:
-                n_orphan_with_none_label += 1
-            else:
-                orphan_label_set.add(elem.label.value())
-
-    return len(set(all_labels)), n_orphan_with_none_label + len(orphan_label_set)
-
 def mark_with_dict(matrix, result_dict):
     for elem in matrix:
         try: 
@@ -436,9 +421,12 @@ def main():
             result_dict[elem] = i
     print "Done"
     
+    print 
+    print "================== RESULT ========================="
     for filename, m, n_sets in all_matrix:
         n_family, n_orphan = count_user_number_with_dict(m, result_dict)
         print "RESULT for %s: %d %d %d" % (filename, n_family, n_orphan, n_family+n_orphan)
+    print "==================================================="
     
     
     #print result_set
