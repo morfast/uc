@@ -94,6 +94,58 @@ def mark_according_to_id(matrix):
             matrix[i].delete = False
         i += 1
 
+def has_time_intersection(time_spans):
+    for i,s1 in enumerate(time_spans):
+        for j,s2 in enumerate(time_spans[i+1:]):
+            l1, h1 = s1
+            l2, h2 = s2
+            if l1 < l2:
+                if h1 > l2:
+                    return True
+            else:
+                if h2 > l1:
+                    return True
+    return False
+
+def find_jump_access(matrix, start, length):
+    i = start
+
+    time_span = []
+    while i < (start + length - 1):
+        if matrix[i].ip == matrix[i+1].ip:
+            time_span.append((matrix[i].time, matrix[i+1].time))
+            i += 2
+        else:
+            time_span.append((matrix[i].time, matrix[i].time))
+            i += 1
+
+    return has_time_intersection(time_span)
+
+def find_all_jump_access(matrix):
+    i = 0
+    length = len(matrix)
+    same_len = 1
+    same_start = 0
+    n_bad_id = 0
+    bad_id = []
+    while i < length - 1: 
+        if matrix[i].id == matrix[i+1].id:
+            same_len += 1
+        else:
+            if same_len >= 3:
+                # mark elements between two same id
+                if find_jump_access(matrix, same_start, same_len):
+                    bad_id.append(matrix[same_start].id)
+            same_len = 1
+            same_start = i + 1
+        i += 1
+
+    if same_len >= 3:
+        if find_jump_access(matrix, same_start, same_len):
+            bad_id.append(matrix[same_start].id)
+
+    return bad_id
+
 def delete_redundant(matrix):
     return [e for e in matrix if e.delete == False]
 
