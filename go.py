@@ -235,7 +235,7 @@ def guess_family(matrix, start, length):
 def mark_according_to_ip(matrix):
     global Max_Label
     
-    matrix.sort(key = lambda x:(x.ip, x.time))
+    matrix.sort(key = lambda x:(x.ip, x.time, x.id))
     i = 0
     length = len(matrix)
     same_len = 1
