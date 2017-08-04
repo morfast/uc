@@ -31,10 +31,10 @@ def convert_time(timestr):
     return int(h) * 3600 + int(m) * 60 + int(s)
 
 
-def ip2int( ip ):
+def ip2int(ip):
     return struct.unpack('!L',socket.inet_aton(ip))[0]
  
-def int2ip( ip ):
+def int2ip(ip):
     return socket.inet_ntoa(struct.pack('I',socket.htonl(ip)))
 
 def construct_matrix(filename):
@@ -94,58 +94,6 @@ def mark_according_to_id(matrix):
             matrix[i].delete = False
         i += 1
 
-def has_time_intersection(time_spans):
-    for i,s1 in enumerate(time_spans):
-        for j,s2 in enumerate(time_spans[i+1:]):
-            l1, h1 = s1
-            l2, h2 = s2
-            if l1 < l2:
-                if h1 > l2:
-                    return True
-            else:
-                if h2 > l1:
-                    return True
-    return False
-
-def find_jump_access(matrix, start, length):
-    i = start
-
-    time_span = []
-    while i < (start + length - 1):
-        if matrix[i].ip == matrix[i+1].ip:
-            time_span.append((matrix[i].time, matrix[i+1].time))
-            i += 2
-        else:
-            time_span.append((matrix[i].time, matrix[i].time))
-            i += 1
-
-    return has_time_intersection(time_span)
-
-def find_all_jump_access(matrix):
-    i = 0
-    length = len(matrix)
-    same_len = 1
-    same_start = 0
-    n_bad_id = 0
-    bad_id = []
-    while i < length - 1: 
-        if matrix[i].id == matrix[i+1].id:
-            same_len += 1
-        else:
-            if same_len >= 3:
-                # mark elements between two same id
-                if find_jump_access(matrix, same_start, same_len):
-                    bad_id.append(matrix[same_start].id)
-            same_len = 1
-            same_start = i + 1
-        i += 1
-
-    if same_len >= 3:
-        if find_jump_access(matrix, same_start, same_len):
-            bad_id.append(matrix[same_start].id)
-
-    return bad_id
-
 def delete_redundant(matrix):
     return [e for e in matrix if e.delete == False]
 
@@ -179,58 +127,6 @@ def mark_same(matrix, start, length):
             elif matrix[i].label == None:
                     matrix[i].label = l
             i += 1
-
-def mark_none_as_single_family(matrix, start, length):
-    i = start
-    while i < start + length:
-        if matrix[i].label == None:
-            label = FamilyLabel()
-            matrix[i].label = label
-        i += 1
-
-def guess_family(matrix, start, length):
-    """ guess family label according to time info """
-    time_threshold = 60
-
-    labels = [elem.label for elem in matrix[start:start+length] if elem.label != None]
-    n_marked = len(set(labels))
-    labels = [elem.label for elem in matrix[start:start+length] if elem.label == None]
-    n_none = len(set(labels))
-
-    if length == 1 and matrix[start].label == None:
-        newlabel = FamilyLabel()
-        matrix[start].label = newlabel
-        return 1, 0
-    elif length == 1 and matrix[start].label:
-        return 0, 1
-
-    i = start
-    while i < start + length:
-        if matrix[i].label == None:
-            # look backward
-            if i-1 >= start:
-                if matrix[i].time - matrix[i-1].time < time_threshold:
-                    matrix[i].label = matrix[i-1].label
-            # look foreward
-            if matrix[i].label == None and i+1 < start + length:
-                if matrix[i+1].time - matrix[i].time < time_threshold:
-                    if matrix[i+1].label != None:
-                        matrix[i].label = matrix[i+1].label
-                    else:
-                        newlabel = FamilyLabel()
-                        matrix[i].label = newlabel
-                        #matrix[i+1].label = newlabel
-                else:
-                    newlabel = FamilyLabel()
-                    matrix[i].label = newlabel
-        i += 1
-
-    i -= 1
-    if matrix[i].label == None:
-        newlabel = FamilyLabel()
-        matrix[i].label = newlabel
-
-    return n_none, n_marked
 
 def mark_according_to_ip(matrix):
     global Max_Label
@@ -298,25 +194,12 @@ def find_family_in_possbile_groups(all_possible_family):
     return res
 
 
-def count_label(matrix):
-    return len(set([e.label.value() for e in matrix]))
-
-def count_ip(matrix):
-    return len(set([e.ip for e in matrix]))
-
-def count_id(matrix):
-    return len(set([e.id for e in matrix]))
-
-def count_none(matrix):
-    return len(set([e for e in matrix if e.label == None]))
-
 def group_by_label(matrix):
     labels = [(x.label.value(), x.id) for x in matrix if x.label]
     labels.sort(key=lambda x:x[0])
 
     if not labels:
         return []
-
 
     i = 0
     length = len(labels)
@@ -382,13 +265,6 @@ def exist_in_sets(id, sets):
             return i
     return -1
 
-def count_unlabeled_with_dict(matrix, sets):
-    ret = 0
-    for elem in matrix:
-        if elem.label == None and (not exist_in_sets(elem.id, sets)):
-            ret += 1
-    return ret
-
 def mark_with_dict(matrix, result_dict):
     for elem in matrix:
         try: 
@@ -410,7 +286,6 @@ def count_user_number_with_dict(matrix, result_dict):
         else:
             determined_labels.append(elem.label.value())
     return len(set(determined_labels)), len(set(orphan_ids))
-
 
 def write_sets(sets, filename):           
     f = open(filename, "w")               
@@ -480,13 +355,7 @@ def main():
         print "RESULT for %s: %d %d %d" % (filename, n_family, n_orphan, n_family+n_orphan)
     print "==================================================="
     
-    
-    #print result_set
     sys.exit(0)
 
 main()
-sys.exit(0)
-a = [set([1,2,3,4]), set([1,2,3]), set([5,6,7]), set([2,4,5])]
-print merge_one_set(a)
-print a
 
