@@ -318,28 +318,29 @@ def main():
         mark_according_to_ip(m)
         #print_matrix(m)
 
+        # print_matrix(m)
+        r = group_by_label(m)
+        print "number of determined family for this file: %d" % (len(r))
+
         # group IDs which use the same IP, these IDs are possible in the same family
         possible_family = group_by_ip(m)
         print "merging possible_family"
         determined = merge_one_set(possible_family)
         all_possible_family.append(possible_family)
 
-        # print_matrix(m)
-        r = group_by_label(m)
-        all_matrix.append((filename, m, len(r)))
-        print "number of determined family for this file: %d" % (len(r))
-        result_set = merge_two_sets( result_set, r)
-        result_set = merge_two_sets( result_set, determined)
+        result_set = merge_two_sets(result_set, r)
+        result_set = merge_two_sets(result_set, determined)
         # print result_set
         print "number of determined family in total: %d" % (len(result_set))
         print
+        all_matrix.append((filename, m, len(r)))
 
     # determine in the possible set
     # print "all_possible_family", all_possible_family
     r = find_family_in_possbile_groups(all_possible_family)
     print "number of determined family in the possible set: %d" % (len(r))
     result_set = merge_two_sets(result_set, r)
-    print "number of determined family in total: %d" % (len(result_set))
+    print "number of determined family finally: %d" % (len(result_set))
     
     # convert sets to dict
     print "convert sets to dict...",
