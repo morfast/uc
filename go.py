@@ -4,8 +4,6 @@ import sys
 import socket
 import struct
 
-Max_Label = 0
-
 class FamilyLabel:
     Max_Label = 0
     def __init__(self):
@@ -23,6 +21,9 @@ class MatrixElement:
         self.time = time
         self.label = None
         self.delete = False
+    def get_label_value(self):
+        return self.label.value()
+   
 
 def convert_time(timestr):
     """ convert time string to number of seconds """
@@ -59,7 +60,7 @@ def construct_matrix(filename):
 def print_matrix(matrix):
     for elem in matrix:
         if elem.label:
-            print elem.id, int2ip(elem.ip), elem.time, elem.label.value(), elem.delete
+            print elem.id, int2ip(elem.ip), elem.time, elem.get_label_value(), elem.delete
         else:
             print elem.id, int2ip(elem.ip), elem.time, elem.label, elem.delete
 
@@ -109,28 +110,26 @@ def mark_same(matrix, start, length):
         i = start 
         # search the first l from the beginning
         while i < start + length:
-            if matrix[i].label and matrix[i].label.value() == l.value():
+            if matrix[i].label and matrix[i].get_label_value() == l.value():
                 break
             i += 1
         # search the last l from the end
         j = start + length - 1
         while j > i:
-            if matrix[j].label and matrix[j].label.value() == l.value():
+            if matrix[j].label and matrix[j].get_label_value() == l.value():
                 break
             j -= 1
 
         # begin mark
         i += 1
         while i < j:
-            if matrix[i].label and matrix[i].label.value() != l.value():
+            if matrix[i].label and matrix[i].get_label_value() != l.value():
                     matrix[i].label.set_value(l.value())
             elif matrix[i].label == None:
                     matrix[i].label = l
             i += 1
 
 def mark_according_to_ip(matrix):
-    global Max_Label
-    
     matrix.sort(key = lambda x:(x.ip, x.time, x.id))
     i = 0
     length = len(matrix)
@@ -195,7 +194,7 @@ def find_family_in_possbile_groups(all_possible_family):
 
 
 def group_by_label(matrix):
-    labels = [(x.label.value(), x.id) for x in matrix if x.label]
+    labels = [(x.get_label_value(), x.id) for x in matrix if x.label]
     labels.sort(key=lambda x:x[0])
 
     if not labels:
@@ -284,7 +283,7 @@ def count_user_number_with_dict(matrix, result_dict):
         if elem.label == None:
             orphan_ids.append(elem.id)
         else:
-            determined_labels.append(elem.label.value())
+            determined_labels.append(elem.get_label_value())
     return len(set(determined_labels)), len(set(orphan_ids))
 
 def write_sets(sets, filename):           
