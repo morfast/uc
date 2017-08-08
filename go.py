@@ -6,13 +6,18 @@ import struct
 
 class FamilyLabel:
     Max_Label = 0
+    All_labels = []
     def __init__(self):
         FamilyLabel.Max_Label += 1
         self._value_ = FamilyLabel.Max_Label
+        self._pos_ = len(FamilyLabel.All_labels)
+        FamilyLabel.All_labels.append(self._value_)
     def value(self):
-        return self._value_
+        return FamilyLabel.All_labels[self._pos_]
     def set_value(self, v):
-        self._value_ = v
+        FamilyLabel.All_labels[self._pos_] = v
+    def set_same_value(self, l):
+        self._pos_ = l._pos_
 
 class MatrixElement:
     def __init__(self, id, ip, time):
@@ -30,7 +35,6 @@ def convert_time(timestr):
     # 09:11:13 -> 9*60*60 + 11*60 + 13
     h, m, s = timestr.split(':')
     return int(h) * 3600 + int(m) * 60 + int(s)
-
 
 def ip2int(ip):
     return struct.unpack('!L',socket.inet_aton(ip))[0]
@@ -101,32 +105,34 @@ def delete_redundant(matrix):
 def mark_same(matrix, start, length):
     # how many labels?
     labels = [elem.label for elem in matrix[start:start+length] if elem.label != None]
-    labels_set = set(labels)
+    sorted_label_list = sorted(list(set(labels)), key=lambda x:x._pos_)
 
-    for l in labels_set:
+    for l in sorted_label_list:
         if labels.count(l) <= 1:
             continue
         # replace labels between two l
         i = start 
         # search the first l from the beginning
         while i < start + length:
-            if matrix[i].label and matrix[i].get_label_value() == l.value():
+            if matrix[i].label and matrix[i].label == l:
                 break
             i += 1
         # search the last l from the end
         j = start + length - 1
         while j > i:
-            if matrix[j].label and matrix[j].get_label_value() == l.value():
+            if matrix[j].label and matrix[j].label == l:
                 break
             j -= 1
 
         # begin mark
         i += 1
         while i < j:
-            if matrix[i].label and matrix[i].get_label_value() != l.value():
-                    matrix[i].label.set_value(l.value())
+            if matrix[i].label and matrix[i].label != l:
+                l.set_value(matrix[i].get_label_value())
+                matrix[i].label.set_same_value(l)
+                #l.set_same_value(matrix[i].label)
             elif matrix[i].label == None:
-                    matrix[i].label = l
+                matrix[i].label = l
             i += 1
 
 def mark_according_to_ip(matrix):
@@ -258,12 +264,6 @@ def merge_two_sets(a, b):
                 
     return res
 
-def exist_in_sets(id, sets):
-    for i,s in enumerate(sets):
-        if id in s:
-            return i
-    return -1
-
 def mark_with_dict(matrix, result_dict):
     for elem in matrix:
         try: 
@@ -315,11 +315,11 @@ def main():
         # mark labels by IP
         sys.stderr.write("marking by ip\n")
         mark_according_to_ip(m)
-        #print_matrix(m)
+        mark_according_to_ip(m)
 
-        # print_matrix(m)
+        #print_matrix(m)
         r = group_by_label(m)
-        print "number of determined family for this file: %d" % (len(r))
+        print "number of determined family for file %s: %d" % (filename, len(r))
 
         # group IDs which use the same IP, these IDs are possible in the same family
         possible_family = group_by_ip(m)
